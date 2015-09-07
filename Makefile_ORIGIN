@@ -1,0 +1,47 @@
+CC = arm-none-eabi-gcc
+CXX = arm-none-eabi-g++
+OBJCPY = arm-none-eabi-objcopy
+
+STM32CUBEROOT = /home/ery/dev/STM32F4/STM32Cube_FW_F4_V1.7.0
+STM32CMSIS_DEVICE = $(STM32CUBEROOT)/Drivers/CMSIS/Device/ST/STM32F4xx/Include
+STM32CMSIS_CORE = $(STM32CUBEROOT)/Drivers/CMSIS/Include
+STM32CMSIS_HALDRIVER_INC = $(STM32CUBEROOT)/Drivers/STM32F4xx_HAL_Driver/Inc
+STM32CMSIS_HALDRIVER_SRC = $(STM32CUBEROOT)/Drivers/STM32F4xx_HAL_Driver/Src
+STM32CMSIS_BSP = $(STM32CUBEROOT)/Drivers/BSP/STM32F4xx-Nucleo
+STM32LINKERSCRIPT_F401 = STM32F401CE_FLASH.ld
+
+STM32F401_STARTUP = startup_stm32f401xe
+
+COMPILEOPTIONS_STM32F401 = -Wall -mcpu=cortex-m4 -mlittle-endian -mthumb -DSTM32F401xE -O1
+LINKOPTIONS_STM32F401 = -mcpu=cortex-m4 -mlittle-endian -mthumb -DSTM32F401xE
+
+
+CFLAGS+=$(COMPILEOPTIONS_STM32F401)
+CFLAGS+=-I$(STM32CMSIS_DEVICE) -I$(STM32CMSIS_CORE)
+
+CXXFLAGS+=$(CFLAGS)
+
+LDFLAGS+=$(LINKOPTIONS_STM32F401)
+LDFLAGS+=-T$(STM32LINKERSCRIPT_F401)
+LDFLAGS+=-Wl,--gc-sections
+
+
+TARGET = test_stm32f401
+SRCS = main system $(STM32F401_STARTUP)
+OBJS = $(addsuffix .o,$(SRCS))
+
+
+$(TARGET):  $(OBJS)
+	$(CC) -o $@.elf $^ $(LDFLAGS)
+	$(OBJCPY) -Oihex $@.elf $@.hex
+
+.c.o:
+	$(CC) $(CFLAGS) -g -c $<
+
+.s.o:
+	$(CC) $(CFLAGS) -g -c $<
+
+.PHONY: clean
+clean:
+	$(RM) $(TARGET).elf $(TARGET).hex $(OBJS)
+

@@ -1,0 +1,1 @@
+/usr/bin/arm-none-eabi-gcc   -Wall -mcpu=cortex-m4 -mlittle-endian -mthumb -DSTM32F401xE -O1    -mcpu=cortex-m4 -mlittle-endian -mthumb -DSTM32F401xE -TSTM32F401CE_FLASH.ld -Wl,--gc-sections CMakeFiles/stm32-cmake-test.dir/main.c.o CMakeFiles/stm32-cmake-test.dir/system.c.o CMakeFiles/stm32-cmake-test.dir/startup_stm32f401xe.s.o  -o stm32-cmake-test  

@@ -1,0 +1,1 @@
+/home/ery/local_devel/stm32template/CMakeFiles/stm32-cmake-test.dir
