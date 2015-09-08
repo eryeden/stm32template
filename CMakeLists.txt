@@ -48,7 +48,95 @@ set(STARTUP_STM32F401 "startup_stm32f401xe.s")
 set(STM32_COMPILEOPTIONS "-Wall -mcpu=cortex-m4 -mlittle-endian -mthumb -DSTM32F401xE -O1")
 set(STM32_LINKOPTIONS "-mcpu=cortex-m4 -mlittle-endian -mthumb -DSTM32F401xE")
 
+#Find stm32cube hal library ###############################################
+SET(HAL_COMPONENTS adc can cec cortex crc cryp dac dcmi dma dma2d eth flash
+  flash_ramfunc fmpi2c gpio hash hcd i2c i2s irda iwdg ltdc
+  nand nor pccard pcd pwr qspi rcc rng rtc sai sd sdram
+  smartcard spdifrx spi sram tim uart usart wwdg fmc fsmc
+  sdmmc usb)
+
+SET(HAL_REQUIRED_COMPONENTS cortex pwr rcc)
+
+# Components that have _ex sources
+SET(HAL_EX_COMPONENTS adc cryp dac dcmi dma flash fmpi2c hash i2c i2s pcd
+  pwr rcc rtc sai tim)
+
+# Components that have ll_ in names instead of hal_
+SET(HAL_LL_COMPONENTS fmc fsmc sdmmc usb)
+
+SET(HAL_PREFIX stm32f4xx_)
+
+SET(HAL_HEADERS
+  stm32f4xx_hal.h
+  stm32f4xx_hal_def.h
+  )
+
+SET(HAL_SRCS
+  stm32f4xx_hal.c
+  )
+
+#使用コンポーネントの設定がなければすべてのコンポーネントを使用する
+IF(NOT STM32HAL_FIND_COMPONENTS)
+  SET(STM32HAL_FIND_COMPONENTS ${HAL_COMPONENTS})
+  MESSAGE(STATUS
+    "No STM32HAL components selected, using all: ${STM32HAL_FIND_COMPONENTS}")
+ENDIF()
+
+#HAL_REQUIRED_COMPONENTSが使用コンポーネントリストに含まれていない場合、それを使用コンポーネント（STM32HAL_FIND_COMPONENTS）に追加する
+FOREACH(cmp ${HAL_REQUIRED_COMPONENTS})
+  LIST(FIND STM32HAL_FIND_COMPONENTS ${cmp} STM32HAL_FOUND_INDEX)
+  IF(${STM32HAL_FOUND_INDEX} LESS 0)
+    LIST(APPEND STM32HAL_FIND_COMPONENTS ${cmp})
+  ENDIF()
+ENDFOREACH()
+
+FOREACH(cmp ${STM32HAL_FIND_COMPONENTS})
+  #HALコンポーネントに含まれているかをチェック
+  LIST(FIND HAL_COMPONENTS ${cmp} STM32HAL_FOUND_INDEX)
+  IF(${STM32HAL_FOUND_INDEX} LESS 0)
+    MESSAGE(FATAL_ERROR "Unknown STM32HAL component: ${cmp}. Available components: ${HAL_COMPONENTS}")
+  ENDIF()
+
+  #コンポーネントがLLコンポーネントであるかをチェックし、適切なファイル名でインクルード、ソースファイル名として追加
+  LIST(FIND HAL_LL_COMPONENTS ${cmp} STM32HAL_FOUND_INDEX)
+  IF(${STM32HAL_FOUND_INDEX} LESS 0)
+    #LLコンポーネント出ない場合
+    LIST(APPEND HAL_HEADERS ${HAL_PREFIX}hal_${cmp}.h)
+    LIST(APPEND HAL_SRCS ${HAL_PREFIX}hal_${cmp}.c)
+  ELSE()
+    #LLコンポーネントの場合
+    LIST(APPEND HAL_HEADERS ${HAL_PREFIX}ll_${cmp}.h)
+    LIST(APPEND HAL_SRCS ${HAL_PREFIX}ll_${cmp}.c)
+  ENDIF()
+
+  #EXコンポーネントの場合
+  LIST(FIND HAL_EX_COMPONENTS ${cmp} STM32HAL_FOUND_INDEX)
+  IF(NOT (${STM32HAL_FOUND_INDEX} LESS 0))
+    LIST(APPEND HAL_HEADERS ${HAL_PREFIX}hal_${cmp}_ex.h)
+    LIST(APPEND HAL_SRCS ${HAL_PREFIX}hal_${cmp}_ex.c)
+  ENDIF()
+ENDFOREACH()
+
+#重複を削除
+LIST(REMOVE_DUPLICATES HAL_HEADERS)
+LIST(REMOVE_DUPLICATES HAL_SRCS)
+
+message("#######HAL HEADRS#######")
+#message(${HAL_HEADERS})
+FOREACH(comp ${HAL_HEADERS})
+  message(${comp})
+ENDFOREACH()
+message("#######HAL SOURCES#######")
+#message(${HAL_SRCS})
+FOREACH(comp ${HAL_SRCS})
+  message("${HAL_CMSIS_SRC}/${comp}")
+  LIST(APPEND STM32HAL_SOURCES "${HAL_CMSIS_SRC}/${comp}")
+ENDFOREACH()
+
+#############################################################################
+
 INCLUDE_DIRECTORIES(
+  .
   ${DEVICE_CMSIS}
   ${CORE_CMSIS}
   ${HAL_CMSIS_INC}
@@ -77,5 +165,5 @@ set(SRCS
   ${STARTUP_STM32F401}
   )
 
-add_executable(${CMAKE_PROJECT_NAME} ${SRCS})
+add_executable(${CMAKE_PROJECT_NAME} ${SRCS} ${STM32HAL_SOURCES})
 
